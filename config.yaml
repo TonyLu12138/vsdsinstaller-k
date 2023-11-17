@@ -1,0 +1,5 @@
+config:
+  architecture: ppc64le
+  kernel: 5.4.0-131-generic
+  kernel-package: krl.tar.gz
+  VersaSDS-DEB: versasds1_1.1_ppc64el.deb
