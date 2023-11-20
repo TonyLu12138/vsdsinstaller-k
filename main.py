@@ -33,9 +33,9 @@ def main():
                         help='Replacement of the kernel')
     parser.add_argument('-c', '--check', action='store_true',
                         help='Checking the kernel version')
-    parser.add_argument('-iV', '--install', action='store_true',
+    parser.add_argument('-i', '--install', action='store_true',
                         help='Install VersaSDS DEB')
-    parser.add_argument('-uV', '--uninstall', action='store_true',
+    parser.add_argument('-u', '--uninstall', action='store_true',
                         help='Uninstall VersaSDS DEB')
     parser.add_argument('-d', '--display', action='store_true',
                         help='')
