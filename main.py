@@ -2,7 +2,7 @@
 
 import argparse
 from log_record import Logger
-from replacement_installation import Re_In_
+from replacement_installation import Replacement_Installation
 
 # 更换内核
 def replace_kernel(re_in):
@@ -44,7 +44,7 @@ def main():
     args = parser.parse_args()
 
     logger = Logger("log")
-    re_in = Re_In_(logger)
+    re_in = Replacement_Installation(logger)
     
     if args.replace:
         replace_kernel(re_in)
