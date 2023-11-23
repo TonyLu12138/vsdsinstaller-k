@@ -7,7 +7,7 @@ from base import Base
 
 current_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
-class Replacement_Installation:
+class ReplacementInstallation:
     def __init__(self, logger):
         self.base = Base(logger)
         self.logger = logger
