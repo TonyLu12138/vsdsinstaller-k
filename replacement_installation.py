@@ -17,87 +17,101 @@ class ReplacementInstallation:
         yaml_filename = "config.yaml"
         
         yaml_path = os.path.join(current_dir, yaml_filename)
-        print(f"yaml的路径：{yaml_path}")
-        if not os.path.isfile(yaml_path):
-            raise FileNotFoundError(f"未找到 {yaml_filename} 文件")
-        self.config = self.base.get_version_from_yaml("config", yaml_path)
-        return self.config
-    
+        # print(f"yaml的路径：{yaml_path}")
+        try:
+            if not os.path.isfile(yaml_path):
+                raise FileNotFoundError(f"未找到 {yaml_filename} 文件\n请检查配置文件是否在当前路径或者配置文件名称是否为config.yaml")
+            self.config = self.base.get_version_from_yaml("config", yaml_path)
+            return self.config
+        except FileNotFoundError as e:
+            print(e)  
+            sys.exit()
+
     def change_kernel(self):
-        expected_architecture = self.config.get('architecture') # 预期架构
-        expected_kernel_version = self.config.get('kernel') # 预期内核版本
+        expected_architecture = self.config.get('architecture').strip() # 预期架构
+        expected_kernel_version = self.config.get('kernel').strip() # 预期内核版本
 
         # 检查当前系统处理器架构和内核版本
-        current_architecture = self.base.com("uname -p").stdout
-        current_kernel_version = self.base.com("uname -r").stdout
-
+        current_architecture = self.base.com("uname -p").stdout.strip()
+        current_kernel_version = self.base.com("uname -r").stdout.strip()
         # 检查当前系统是否符合预期架构
         if current_architecture != expected_architecture:
             print(f"当前系统处理器架构不匹配，请检查。当前架构：{current_architecture}")
             self.logger.log(f"处理器架构不匹配。当前架构：{current_architecture}")
             return
-
+        else:
+            print(f"当前系统符合预期架构\n当前系统架构：{current_architecture}\n预期系统架构：{expected_architecture}")
+                  
         # 检查当前内核版本是否符合预期版本
-        if current_kernel_version not in expected_kernel_version:
-            kernel_package_name = self.config.get('kernel-package')
+        if current_kernel_version not in expected_kernel_version: # 不符合 继续后续步骤
+            print("内核版本不符合预期版本，进行替换")
+            kernel_package_name = self.config.get('kernel-package').strip()
             tar_path = os.path.join(current_dir, kernel_package_name)
             # 检查内核安装包是否存在于当前路径
-            if not os.path.exists(tar_path):
-                print(f"在当前路径下找不到 {kernel_package_name} 包")
-                exit()
+            try:
+                if not os.path.exists(tar_path):
+                    raise FileNotFoundError(f"在当前路径下找不到 {kernel_package_name} 包")
+            except FileNotFoundError as e:
+                print(e)
+                sys.exit() 
             # 解压内核安装包
-            kernel_package_name = self.config.get('kernel-package')
             command = f"tar -xzvf {kernel_package_name}"
+            print("解压内核安装包中")
             result = self.base.com(command)
             self.logger.log(f"执行指令：{command}. \n执行结果：{result.stdout}")
             exitcode = result.returncode
-            if 0 == exitcode:
+            if 0 != exitcode:
                 print("解压失败，中止程序。")
-                exit()
+                sys.exit()
             else:
                 tar_path = os.path.join(current_dir, "kernel")
-                
+                print({tar_path})
                 # 拷贝内核文件及内核模块
                 command_a = f"cp {tar_path}/boot/* /boot/"
-                self.base.com(command_a)
+                result = self.base.com(command_a)
                 self.logger.log(f"执行指令：{command_a}. \n执行结果：{result.stdout}")
                 command_b = f"cp -r {tar_path}/lib/modules/5.4.0-131-generic /lib/modules/"
-                self.base.com(command_b)
+                result = self.base.com(command_b)
                 self.logger.log(f"执行指令：{command_b}. \n执行结果：{result.stdout}")
                 
                 # 生成 initramfs 映像
-                self.base.com(f"update-initramfs -c -k {expected_kernel_version}")
-                self.logger.log(f"执行指令：{command}. \n执行结果：{result.stdout}")
-                
-                command = f"ls /boot | grep initrd.img-{expected_kernel_version}"
-                result = self.base.com(command)
+                command_create = f"update-initramfs -c -k {expected_kernel_version}"
+                result = self.base.com(command_create)
+                self.logger.log(f"执行指令：{command_create}. \n执行结果：{result.stdout}")
+               
+                command_ls = f"ls /boot | grep initrd.img-{expected_kernel_version}"
+                result = self.base.com(command_ls)
+                self.logger.log(f"执行指令：{command_ls}. \n执行结果：{result.stdout}")
                 if result.stdout.strip(): 
                     print("检查 initrd.img 文件存在")
                 else:
                     print("检查 initrd.img 文件不存在。重新尝试生成 initramfs 映像")
-                    self.base.com(f"update-initramfs -c -k {expected_kernel_version}")
-                    self.logger.log(f"再次执行指令：{command}. \n执行结果：{result.stdout}")
-                    result = self.base.com(command)
+                    result = self.base.com(command_create)
+                    self.logger.log(f"再次执行指令：{command_create}. \n执行结果：{result.stdout}")
+                    result = self.base.com(command_ls)
+                    self.logger.log(f"再次执行指令：{command_ls}. \n执行结果：{result.stdout}")
                     if result.stdout.strip(): 
                         print("检查 initrd.img 文件存在")
                     else:
                         print("检查 initrd.img 文件不存在，程序终止")
-                        exit()
-
+                        sys.exit()
+                        
                 # 更新 grub
                 command = f"sudo update-grub"
                 result = self.base.com(command)
                 self.logger.log(f"执行指令：{command}. \n执行结果：{result.stdout}")
                 if "done" not in result.stdout: 
                     print("更新 grub 失败，程序终止")
-                    exit()
+                    sys.exit()
                 else:
                     print("更新 grub 成功")
+        else:
+            print("已是预期内核版本")
 
     def check_kernel_version(self):
-        expected_kernel_version = self.config.get('kernel') # 预期内核版本
+        expected_kernel_version = self.config.get('kernel').strip() # 预期内核版本
         # 检查当前系统处理器架构和内核版本
-        current_kernel_version = self.base.com("uname -r").stdout
+        current_kernel_version = self.base.com("uname -r").stdout.strip()
         self.logger.log(f"执行指令：'uname -r'. \n执行结果：{current_kernel_version}")
         # 检查当前内核版本是否符合预期版本
         print(f"当前内核版本: {current_kernel_version}")
@@ -107,13 +121,16 @@ class ReplacementInstallation:
             print("已是预期内核版本")
 
     def install_versasds_deb(self):
-        VersaSDS_DEB = self.config.get('VersaSDS-DEB') # 预期内核版本
+        VersaSDS_DEB = self.config.get('VersaSDS-DEB').strip() # 预期内核版本
         
         # 检查 DEB 包是否存在于当前路
         deb_package_path = os.path.join(current_dir, VersaSDS_DEB)
-        if not os.path.exists(deb_package_path):
-            print(f"在当前路径下找不到 {VersaSDS_DEB} 包")
-            exit()
+        try:
+            if not os.path.exists(deb_package_path):
+                raise FileNotFoundError(f"在当前路径下找不到 {VersaSDS_DEB} 包\n请检查安装包是否在当前路径或者安装包名称是否与配置文件一致。")
+        except FileNotFoundError as e:
+            print(e)
+            sys.exit()
 
         # 安装依赖包和 Java
         command = "apt install -y flex xmlto po4a xsltproc asciidoctor python3-setuptools help2man unzip default-jre openjdk-11-jre-headless"
@@ -123,7 +140,7 @@ class ReplacementInstallation:
         
         # 安装 VersaSDS (DRBD/LINSTOR)
         command = f"dpkg -i {VersaSDS_DEB}"
-        print("开始安装VersaSDS (DRBD/LINSTOR)")
+        print("开始安装VersaSDS")
         result = self.base.com(command)
         self.logger.log(f"执行指令：{command}. \n执行结果：{result.stdout}")
         
@@ -133,24 +150,21 @@ class ReplacementInstallation:
         self.logger.log(f"执行指令：{command}. \n执行结果：{result.stdout}")
         if not result.stdout.strip(): 
             print("versasds 安装失败！")
-            print(result.stdout.strip())
-            exit()
+            sys.exit()
         
         command = f"linstor --version"
         result = self.base.com(command)
         self.logger.log(f"执行指令：{command}. \n执行结果：{result.stdout}")
         if "not" in result.stdout: 
             print("linstor 安装失败！")
-            print(result.stdout)
-            exit()
+            sys.exit()
 
-        command = f"drbdadm —-version"
+        command = f"drbdadm --version"
         result = self.base.com(command)
         self.logger.log(f"执行指令：{command}. \n执行结果：{result.stdout}")
         if "DRBD_KERNEL_VERSION=9" and "DRBDADM_VERSION=9" not in result.stdout:
             print("drbdadm 安装失败！")
-            print(result.stdout)
-            exit()
+            sys.exit()
 
         print("安装完成")
         
@@ -165,7 +179,7 @@ class ReplacementInstallation:
         
         command = f"dpkg -l | grep ^ii | grep versasds"
         result = self.base.com(command)
-        if result.stdout:
+        if not result.stdout:
             print("卸载成功")
         else:
             print("卸载失败")
@@ -176,7 +190,7 @@ class ReplacementInstallation:
         component_names = {
             "DRBD_KERNEL_VERSION": "DRBD",
             "DRBDADM_VERSION": "DRBDADM",
-            "LINSTOR": "LINSTOR"
+            "LINSTOR": "LINSTOR Client"
         }
         versions = {}
 
