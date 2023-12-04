@@ -38,7 +38,7 @@ def main():
     parser.add_argument('-u', '--uninstall', action='store_true',
                         help='Uninstall VersaSDS DEB')
     parser.add_argument('-d', '--display', action='store_true',
-                        help='')
+                        help=argparse.SUPPRESS)
     parser.add_argument('-v', '--version', action='store_true',
                         help='Show version information')
     args = parser.parse_args()
