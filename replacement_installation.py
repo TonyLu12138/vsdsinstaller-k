@@ -36,15 +36,15 @@ class ReplacementInstallation:
         current_kernel_version = self.base.com("uname -r").stdout.strip()
         # 检查当前系统是否符合预期架构
         if current_architecture != expected_architecture:
-            print(f"当前系统处理器架构不匹配，请检查。当前架构：{current_architecture}")
+            print(f"当前系统架构为：{current_architecture}，不符合预期，请检查。")
             self.logger.log(f"处理器架构不匹配。当前架构：{current_architecture}")
             return
         else:
-            print(f"当前系统符合预期架构\n当前系统架构：{current_architecture}\n预期系统架构：{expected_architecture}")
+            print(f"当前系统架构为：{current_architecture}，符合预期架构。")
                   
         # 检查当前内核版本是否符合预期版本
         if current_kernel_version not in expected_kernel_version: # 不符合 继续后续步骤
-            print("内核版本不符合预期版本，进行替换")
+            print(f"当前内核版本为：{current_kernel_version}，不符合预期版本，准备更新内核")
             kernel_package_name = self.config.get('kernel-package').strip()
             tar_path = os.path.join(current_dir, kernel_package_name)
             # 检查内核安装包是否存在于当前路径
@@ -106,7 +106,7 @@ class ReplacementInstallation:
                 else:
                     print("更新 grub 成功")
         else:
-            print("已是预期内核版本")
+            print(f"当前内核版本为：{current_kernel_version}，已是预期内核版本")
 
     def check_kernel_version(self):
         expected_kernel_version = self.config.get('kernel').strip() # 预期内核版本
@@ -132,18 +132,27 @@ class ReplacementInstallation:
             print(e)
             sys.exit()
 
+        self.base.com("apt update")
+
         # 安装依赖包和 Java
         command = "apt install -y flex xmlto po4a xsltproc asciidoctor python3-setuptools help2man unzip default-jre openjdk-11-jre-headless"
         print("开始安装依赖包和 Java，网络原因可能会花费较多时间")
         result = self.base.com(command)
         self.logger.log(f"执行指令：{command}. \n执行结果：{result.stdout}")
-        
+        exit_code = result.returncode
+        if exit_code == 0:
+            print("apt install 命令成功执行")
+        else:
+            print("apt install 命令执行失败")
+            print(f"错误信息：\n{result}")
+            sys.exit()
+
         # 安装 VersaSDS (DRBD/LINSTOR)
         command = f"dpkg -i {VersaSDS_DEB}"
         print("开始安装VersaSDS")
         result = self.base.com(command)
         self.logger.log(f"执行指令：{command}. \n执行结果：{result.stdout}")
-        
+
         # 检查安装
         command = f"dpkg -l | grep ^ii | grep versasds"
         result = self.base.com(command)
