@@ -11,10 +11,10 @@ class ReplacementInstallation:
     def __init__(self, logger):
         self.base = Base(logger)
         self.logger = logger
-        self.config = self.install_from_yaml()
+        self.config = None
     
     def install_from_yaml(self):
-        yaml_filename = "config.yaml"
+        yaml_filename = "vsdsinstaller-k_config.yaml"
         
         yaml_path = os.path.join(current_dir, yaml_filename)
         # print(f"yaml的路径：{yaml_path}")
@@ -28,6 +28,9 @@ class ReplacementInstallation:
             sys.exit()
 
     def change_kernel(self):
+        if not self.config:
+            self.config = self.install_from_yaml()
+
         expected_architecture = self.config.get('architecture').strip() # 预期架构
         expected_kernel_version = self.config.get('kernel').strip() # 预期内核版本
 
@@ -60,12 +63,12 @@ class ReplacementInstallation:
             result = self.base.com(command)
             self.logger.log(f"执行指令：{command}. \n执行结果：{result.stdout}")
             exitcode = result.returncode
-            if 0 != exitcode:
+            if exitcode != 0:
                 print("解压失败，中止程序。")
                 sys.exit()
             else:
-                tar_path = os.path.join(current_dir, "kernel")
-                print({tar_path})
+                tar_path = os.path.join(current_dir, "krl")    ###########
+                # print(f"{tar_path}")
                 # 拷贝内核文件及内核模块
                 command_a = f"cp {tar_path}/boot/* /boot/"
                 result = self.base.com(command_a)
@@ -78,24 +81,28 @@ class ReplacementInstallation:
                 command_create = f"update-initramfs -c -k {expected_kernel_version}"
                 result = self.base.com(command_create)
                 self.logger.log(f"执行指令：{command_create}. \n执行结果：{result.stdout}")
-               
-                command_ls = f"ls /boot | grep initrd.img-{expected_kernel_version}"
-                result = self.base.com(command_ls)
-                self.logger.log(f"执行指令：{command_ls}. \n执行结果：{result.stdout}")
-                if result.stdout.strip(): 
-                    print("检查 initrd.img 文件存在")
-                else:
-                    print("检查 initrd.img 文件不存在。重新尝试生成 initramfs 映像")
-                    result = self.base.com(command_create)
-                    self.logger.log(f"再次执行指令：{command_create}. \n执行结果：{result.stdout}")
+                if result.returncode == 0:
+                    command_ls = f"ls /boot | grep initrd.img-{expected_kernel_version}"
                     result = self.base.com(command_ls)
-                    self.logger.log(f"再次执行指令：{command_ls}. \n执行结果：{result.stdout}")
+                    self.logger.log(f"执行指令：{command_ls}. \n执行结果：{result.stdout}")
                     if result.stdout.strip(): 
                         print("检查 initrd.img 文件存在")
                     else:
-                        print("检查 initrd.img 文件不存在，程序终止")
-                        sys.exit()
-                        
+                        print("检查 initrd.img 文件不存在。重新尝试生成 initramfs 映像")
+                        result = self.base.com(command_create)
+                        self.logger.log(f"再次执行指令：{command_create}. \n执行结果：{result.stdout}")
+                        result = self.base.com(command_ls)
+                        self.logger.log(f"再次执行指令：{command_ls}. \n执行结果：{result.stdout}")
+                        if result.stdout.strip(): 
+                            print("检查 initrd.img 文件存在")
+                        else:
+                            print("检查 initrd.img 文件不存在，程序终止")
+                            sys.exit()
+                else:
+                    print("生成 initramfs 映像失败")  
+                    self.logger.log(f"生成 initramfs 映像失败")    
+                    sys.exit()  
+
                 # 更新 grub
                 command = f"sudo update-grub"
                 result = self.base.com(command)
@@ -109,6 +116,9 @@ class ReplacementInstallation:
             print(f"当前内核版本为：{current_kernel_version}，已是预期内核版本")
 
     def check_kernel_version(self):
+        if not self.config:
+            self.config = self.install_from_yaml()
+
         expected_kernel_version = self.config.get('kernel').strip() # 预期内核版本
         # 检查当前系统处理器架构和内核版本
         current_kernel_version = self.base.com("uname -r").stdout.strip()
@@ -121,6 +131,9 @@ class ReplacementInstallation:
             print("已是预期内核版本")
 
     def install_versasds_deb(self):
+        if not self.config:
+            self.config = self.install_from_yaml()
+
         VersaSDS_DEB = self.config.get('VersaSDS-DEB').strip() # 预期内核版本
         
         # 检查 DEB 包是否存在于当前路
@@ -218,9 +231,14 @@ class ReplacementInstallation:
                 match = re.search(pattern, drbdadm_output)
                 if match:
                     versions[component_names[component]] = match.group(1)
+                else:
+                    versions[component_names[component]] = "Not Found"  # 如果未找到版本信息，设为 "Not Found"
             elif component == "LINSTOR":
-                linstor_version = linstor_output.split("\n")[0].split(";")[0].split(" ")[-1]
-                versions[component_names[component]] = linstor_version
+                if "not found" not in linstor_output:
+                    linstor_version = linstor_output.split("\n")[0].split(";")[0].split(" ")[-1]
+                    versions[component_names[component]] = linstor_version
+                else:
+                    versions[component_names[component]] = "Not Found"
 
         table = PrettyTable()
         table.field_names = ["组件", "版本"]
