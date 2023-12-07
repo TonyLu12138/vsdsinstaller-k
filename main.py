@@ -28,7 +28,7 @@ def display_version():
     print("version: v1.0.0")
 
 def main():
-    parser = argparse.ArgumentParser(description='None')
+    parser = argparse.ArgumentParser(description='vsdsinstaller-k')
     parser.add_argument('-r', '--replace', action='store_true',
                         help='Replacement of the kernel')
     parser.add_argument('-c', '--check', action='store_true',
@@ -42,7 +42,7 @@ def main():
     parser.add_argument('-v', '--version', action='store_true',
                         help='Show version information')
     args = parser.parse_args()
-
+    
     logger = Logger("log")
     re_in = ReplacementInstallation(logger)
     
