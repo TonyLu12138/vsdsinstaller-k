@@ -40,10 +40,10 @@ def main():
     parser.add_argument('-d', '--display', action='store_true',
                         help=argparse.SUPPRESS)
     parser.add_argument('-v', '--version', action='store_true',
-                        help='Show version information')
+                        help='show version information')
     args = parser.parse_args()
     
-    logger = Logger("log")
+    logger = Logger("vsdsinstaller-k")
     re_in = ReplacementInstallation(logger)
     
     if args.replace:
