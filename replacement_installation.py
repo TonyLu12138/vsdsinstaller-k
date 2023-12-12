@@ -2,6 +2,8 @@
 import os
 import re
 import sys
+import tarfile
+import time
 from prettytable import PrettyTable
 from base import Base
 
@@ -26,6 +28,28 @@ class ReplacementInstallation:
         except FileNotFoundError as e:
             print(e)  
             sys.exit()
+
+    # 获取解压后的文件夹名字
+    def get_extracted_folder(self, kernel_package_name):
+        
+        folder_name = None
+        with tarfile.open(kernel_package_name, 'r') as tar:
+            folder_name = os.path.commonprefix(tar.getnames())
+        return folder_name
+    
+    # 检查 copymods
+    def check_copymods(self):
+        try:
+            command = "mount | grep copymods"
+            result = self.base.com(command)
+
+            if result.stdout:
+                print("系统存在 copymods RAMFS 挂载，请检查系统内核模块")
+                sys.exit()
+            else:
+                print("系统中未发现 copymods RAMFS 挂载，可以继续进行后续步骤")
+        except Exception as e:
+            print(f"发生错误：{e}")
 
     def change_kernel(self):
         if not self.config:
@@ -57,6 +81,10 @@ class ReplacementInstallation:
             except FileNotFoundError as e:
                 print(e)
                 sys.exit() 
+            
+            print("执行检查 copymods 方法")
+            self.check_copymods()
+
             # 解压内核安装包
             command = f"tar -xzvf {kernel_package_name}"
             print("解压内核安装包中")
@@ -67,8 +95,10 @@ class ReplacementInstallation:
                 print("解压失败，中止程序。")
                 sys.exit()
             else:
-                tar_path = os.path.join(current_dir, "krl")    ###########
+                extracted_folder = self.get_extracted_folder(tar_path)
+                tar_path = os.path.join(current_dir, extracted_folder)  ###########
                 # print(f"{tar_path}")
+                
                 # 拷贝内核文件及内核模块
                 command_a = f"cp {tar_path}/boot/* /boot/"
                 result = self.base.com(command_a)
@@ -77,6 +107,14 @@ class ReplacementInstallation:
                 result = self.base.com(command_b)
                 self.logger.log(f"执行指令：{command_b}. \n执行结果：{result.stdout}")
                 
+                # 倒计时
+                print("等待 5 秒钟...")
+                for i in range(5, 0, -1):
+                    print(f"\r倒计时: {i}秒", end="")
+                    sys.stdout.flush()
+                    time.sleep(1)
+                print("\n等待结束")
+
                 # 生成 initramfs 映像
                 command_create = f"update-initramfs -c -k {expected_kernel_version}"
                 result = self.base.com(command_create)
@@ -112,6 +150,9 @@ class ReplacementInstallation:
                     sys.exit()
                 else:
                     print("更新 grub 成功")
+                    
+            current_kernel_version = self.base.com("uname -r").stdout.strip()
+            print(f"内核版本更新完成，当前内核版本为：{current_kernel_version}")
         else:
             print(f"当前内核版本为：{current_kernel_version}，已是预期内核版本")
 
@@ -145,6 +186,7 @@ class ReplacementInstallation:
             print(e)
             sys.exit()
 
+        print("执行 apt update, 请耐心等待")
         self.base.com("apt update")
 
         # 安装依赖包和 Java
