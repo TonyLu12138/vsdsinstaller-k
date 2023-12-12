@@ -107,13 +107,7 @@ class ReplacementInstallation:
                 result = self.base.com(command_b)
                 self.logger.log(f"执行指令：{command_b}. \n执行结果：{result.stdout}")
                 
-                # 倒计时
-                print("等待 5 秒钟...")
-                for i in range(5, 0, -1):
-                    print(f"\r倒计时: {i}秒", end="")
-                    sys.stdout.flush()
-                    time.sleep(1)
-                print("\n等待结束")
+                time.sleep(5)
 
                 # 生成 initramfs 映像
                 command_create = f"update-initramfs -c -k {expected_kernel_version}"
@@ -150,7 +144,7 @@ class ReplacementInstallation:
                     sys.exit()
                 else:
                     print("更新 grub 成功")
-                    
+
             current_kernel_version = self.base.com("uname -r").stdout.strip()
             print(f"内核版本更新完成，当前内核版本为：{current_kernel_version}")
         else:
