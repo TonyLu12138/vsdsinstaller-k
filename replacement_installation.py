@@ -103,17 +103,25 @@ class ReplacementInstallation:
                 # 拷贝内核文件及内核模块
                 command_a = f"sudo cp {tar_path}/boot/* /boot/"
                 result = self.base.com(command_a)
-                self.logger.log(f"执行指令：{command_a}. \n执行结果：{result.returncode}")
+                self.logger.log(f"执行指令：{command_a}. \n执行结果：{result.stdout}\n返回码：{result.returncode}")
+                if result.returncode != 0:
+                    print("替换内核失败，程序终止")
+                    sys.exit()
                 command_b = f"sudo cp -r {tar_path}/lib/modules/5.4.0-131-generic /lib/modules/"
                 result = self.base.com(command_b)
-                self.logger.log(f"执行指令：{command_b}. \n执行结果：{result.returncode}")
-                
+                self.logger.log(f"执行指令：{command_b}. \n执行结果：{result.stdout}\n返回码：{result.returncode}")
+                if result.returncode != 0:
+                    print("替换内核失败，程序终止")
+                    sys.exit()
+
                 time.sleep(5)
 
                 # 生成 initramfs 映像
+                print(f"更新 initramfs 中")
                 command_create = f"sudo update-initramfs -c -k {expected_kernel_version}"
                 result = self.base.com(command_create)
                 self.logger.log(f"执行指令：{command_create}. \n执行结果：{result.stdout}")
+                print(f"执行生成 initramfs 映像. \n执行结果：{result.stdout}")
                 if result.returncode == 0:
                     command_ls = f"ls /boot | grep initrd.img-{expected_kernel_version}"
                     result = self.base.com(command_ls)
@@ -146,8 +154,7 @@ class ReplacementInstallation:
                 else:
                     print("更新 grub 成功")
 
-            current_kernel_version = self.base.com("uname -r").stdout.strip()
-            print(f"内核版本更新完成，当前内核版本为：{current_kernel_version}")
+            print(f"内核版本更新完成")
         else:
             print(f"当前内核版本为：{current_kernel_version}，已是预期内核版本")
 
