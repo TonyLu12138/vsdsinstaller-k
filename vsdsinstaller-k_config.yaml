@@ -1,5 +1,5 @@
 config:
-  architecture: x86_64
-  kernel: 5.15.0-88-generic
+  architecture: ppc64le
+  kernel: 5.4.0-131-generic
   kernel-package: krl.tar.gz
   VersaSDS-DEB: versasds1_1.1_ppc64el.deb
