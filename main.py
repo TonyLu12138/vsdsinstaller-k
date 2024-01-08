@@ -25,7 +25,7 @@ def display_drbd_linstor_version(re_in):
     re_in.get_versions()
 
 def display_version():
-    print("version: v1.0.0")
+    print("version: v1.0.1")
 
 def main():
     parser = argparse.ArgumentParser(description='vsdsinstaller-k')
