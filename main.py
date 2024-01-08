@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 import argparse
-from log_record import Logger
+from base import Logger
 from replacement_installation import ReplacementInstallation
 
 # 更换内核
