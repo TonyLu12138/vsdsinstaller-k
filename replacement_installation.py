@@ -240,8 +240,8 @@ class ReplacementInstallation:
                 print("卸载失败")
                 self.logger.log(f"卸载失败")
         else:
-            print("versasds_deb 未安装")
-            self.logger.log(f"versasds_deb 未安装")
+            print("未安装 VersaSDS DEB，无需卸载")
+            self.logger.log(f"未安装 VersaSDS DEB，无需卸载")
 
     def get_versions(self):
         components = ["DRBD_KERNEL_VERSION", "DRBDADM_VERSION", "LINSTOR"]
