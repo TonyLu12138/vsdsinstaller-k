@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 import os
 import re
+import shutil
 import sys
 import tarfile
 import time
@@ -190,7 +191,7 @@ class ReplacementInstallation:
         self.base.com("sudo apt update")
 
         # 安装依赖包和 Java
-        command = "sudo apt install -y flex xmlto po4a xsltproc asciidoctor python3-setuptools help2man unzip default-jre openjdk-11-jre-headless"
+        command = "sudo apt install -y flex xmlto po4a zstd xsltproc asciidoctor python3-setuptools help2man unzip default-jre openjdk-11-jre-headless"
         print("开始安装依赖包和 Java，网络原因可能会花费较多时间")
         result = self.base.com(command)
         exit_code = result.returncode
@@ -226,7 +227,49 @@ class ReplacementInstallation:
             sys.exit()
 
         print("安装完成")
-        
+
+    def install_thin_send_recv(self):
+        if not self.config:
+            self.config = self.install_from_yaml()
+
+        # 检查 thin_send_recv 二进制文件是否存在于当前路
+        thin_send_recv_path = os.path.join(current_dir, "thin_send_recv")
+        try:
+            if not os.path.exists(thin_send_recv_path):
+                raise FileNotFoundError(f"在当前路径下找不到 thin_send_recv 二进制文件\n请检查文件是否在当前路径。")
+        except FileNotFoundError as e:
+            print(e)
+            sys.exit()
+
+        # 移动 thin_send_recv 到 /usr/bin/
+        shutil.move(thin_send_recv_path, "/usr/bin/")
+
+        # 修改权限
+        chmod_command = "chmod 0755 /usr/bin/thin_send_recv"
+        result = self.base.com(chmod_command)
+        exit_code = result.returncode
+        if exit_code == 0:
+            print("文件 thin_send_recv 权限修改成功")
+        else:
+            print("文件 thin_send_recv 权限修改失败")
+            sys.exit()
+
+        # 创建软链接 thin_send
+        ln_send_command = "ln -s /usr/bin/thin_send_recv /usr/bin/thin_send"
+        result = self.base.com(ln_send_command)
+
+        # 创建软链接 thin_recv
+        ln_recv_command = "ln -s /usr/bin/thin_send_recv /usr/bin/thin_recv"
+        result = self.base.com(ln_recv_command)
+
+        thin_send = self.base.com("thin_send -v").stdout
+        thin_recv = self.base.com("thin_recv -v").stdout
+        if "1.0.2" in thin_send and "1.0.2" in thin_recv:
+            print("安装 thin_send_recv 成功")
+        else:
+            print("安装 thin_send_recv 失败")
+            sys.exit()
+
     def uninstall_versasds_deb(self):
         command_check = f"dpkg -l | grep ^ii | grep versasds"
         result = self.base.com(command_check)
