@@ -249,7 +249,8 @@ class ReplacementInstallation:
         result = self.base.com(chmod_command)
         exit_code = result.returncode
         if exit_code == 0:
-            print("文件 thin_send_recv 权限修改成功")
+            pass
+            # print("文件 thin_send_recv 权限修改成功")
         else:
             print("文件 thin_send_recv 权限修改失败")
             sys.exit()
