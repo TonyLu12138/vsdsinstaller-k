@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 import argparse
+import sys
 from base import Logger
 from replacement_installation import ReplacementInstallation
 
@@ -20,12 +21,16 @@ def install_versds_deb(re_in):
 def ubinstall_versds_deb(re_in):
     re_in.uninstall_versasds_deb()
 
+# 安装 thin_send_recv
+def install_thin_send_recv(re_in):
+    re_in.install_thin_send_recv()
+
 # 显示 DRBD/LINSTOR 版本
 def display_drbd_linstor_version(re_in):
     re_in.get_versions()
 
 def display_version():
-    print("version: v1.0.1")
+    print("version: v1.0.2")
 
 def main():
     parser = argparse.ArgumentParser(description='vsdsinstaller-k')
@@ -37,12 +42,18 @@ def main():
                         help='Install VersaSDS DEB')
     parser.add_argument('-u', '--uninstall', action='store_true',
                         help='Uninstall VersaSDS DEB')
+    parser.add_argument('-t', '--thin', action='store_true',
+                        help='Install thin_send_recv')
     parser.add_argument('-d', '--display', action='store_true',
                         help=argparse.SUPPRESS)
     parser.add_argument('-v', '--version', action='store_true',
                         help='show version information')
     args = parser.parse_args()
     
+    if args.version:
+        display_version()
+        sys.exit()
+        
     logger = Logger("vsdsinstaller-k")
     re_in = ReplacementInstallation(logger)
     
@@ -54,10 +65,10 @@ def main():
         install_versds_deb(re_in)
     elif args.uninstall:
         ubinstall_versds_deb(re_in)
+    elif args.thin:
+        install_thin_send_recv(re_in)
     elif args.display:
         display_drbd_linstor_version(re_in)
-    elif args.version:
-        display_version()
     else:
         print(f"请输入对应参数")
 if __name__ == '__main__':
