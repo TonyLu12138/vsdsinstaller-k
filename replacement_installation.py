@@ -243,7 +243,7 @@ class ReplacementInstallation:
 
         # 检查 thin_send_recv 是否已经存在
         if os.path.exists("/usr/bin/thin_send_recv"):
-            print("thin_send_recv 已经存在，跳过安装步骤。")
+            print("thin_send_recv 已经存在，跳过安装步骤")
             # 继续后续操作，例如权限修改和创建软链接
         else:
             # 复制 thin_send_recv 到 /usr/bin/
