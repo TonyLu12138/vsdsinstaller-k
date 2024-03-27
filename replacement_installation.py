@@ -241,35 +241,40 @@ class ReplacementInstallation:
             print(e)
             sys.exit()
 
-        # 移动 thin_send_recv 到 /usr/bin/
-        shutil.move(thin_send_recv_path, "/usr/bin/")
-
-        # 修改权限
-        chmod_command = "chmod 0755 /usr/bin/thin_send_recv"
-        result = self.base.com(chmod_command)
-        exit_code = result.returncode
-        if exit_code == 0:
-            pass
-            # print("文件 thin_send_recv 权限修改成功")
+        # 检查 thin_send_recv 是否已经存在
+        if os.path.exists("/usr/bin/thin_send_recv"):
+            print("thin_send_recv 已经存在，跳过安装步骤。")
+            # 继续后续操作，例如权限修改和创建软链接
         else:
-            print("文件 thin_send_recv 权限修改失败")
-            sys.exit()
+            # 复制 thin_send_recv 到 /usr/bin/
+            shutil.copy(thin_send_recv_path, "/usr/bin/")
 
-        # 创建软链接 thin_send
-        ln_send_command = "ln -s /usr/bin/thin_send_recv /usr/bin/thin_send"
-        result = self.base.com(ln_send_command)
+            # 修改权限
+            chmod_command = "chmod 0755 /usr/bin/thin_send_recv"
+            result = self.base.com(chmod_command)
+            exit_code = result.returncode
+            if exit_code == 0:
+                pass
+                # print("文件 thin_send_recv 权限修改成功")
+            else:
+                print("文件 thin_send_recv 权限修改失败")
+                sys.exit()
 
-        # 创建软链接 thin_recv
-        ln_recv_command = "ln -s /usr/bin/thin_send_recv /usr/bin/thin_recv"
-        result = self.base.com(ln_recv_command)
+            # 创建软链接 thin_send
+            ln_send_command = "ln -s /usr/bin/thin_send_recv /usr/bin/thin_send"
+            result = self.base.com(ln_send_command)
 
-        thin_send = self.base.com("thin_send -v").stdout
-        thin_recv = self.base.com("thin_recv -v").stdout
-        if "1.0.2" in thin_send and "1.0.2" in thin_recv:
-            print("安装 thin_send_recv 成功")
-        else:
-            print("安装 thin_send_recv 失败")
-            sys.exit()
+            # 创建软链接 thin_recv
+            ln_recv_command = "ln -s /usr/bin/thin_send_recv /usr/bin/thin_recv"
+            result = self.base.com(ln_recv_command)
+
+            thin_send = self.base.com("thin_send -v").stdout
+            thin_recv = self.base.com("thin_recv -v").stdout
+            if "1.0.2" in thin_send and "1.0.2" in thin_recv:
+                print("安装 thin_send_recv 成功")
+            else:
+                print("安装 thin_send_recv 失败")
+                sys.exit()
 
     def uninstall_versasds_deb(self):
         command_check = f"dpkg -l | grep ^ii | grep versasds"
